@@ -6,6 +6,9 @@
 
 Establish tuple of matrices/vectors for use as reusable data stores to avoid repeated memory allocations.
 """
+
+using Infiltrator
+
 function setup_cache(domain::Domain)::NamedTuple
 
     # sim constants
@@ -356,7 +359,7 @@ function run_scenario(domain::Domain, param_set::NamedTuple, corals::DataFrame, 
 
         # pre-allocate rankings
         rankings = [depth_priority zeros(Int, length(depth_priority)) zeros(Int, length(depth_priority))]
-
+        
         # Prep site selection
         mcda_vars = DMCDA_vars(
             depth_priority,
@@ -365,7 +368,7 @@ function run_scenario(domain::Domain, param_set::NamedTuple, corals::DataFrame, 
             domain.strongpred,
             domain.conn_ranks,
             zeros(n_species, n_sites),  # dam prob
-            dhw_scen[1, :],  # heatstressprob
+            dhw_scen,  # heatstressprob
             Yout[1, :, :],  # sumcover
             max_cover,
             site_area,
@@ -452,7 +455,7 @@ function run_scenario(domain::Domain, param_set::NamedTuple, corals::DataFrame, 
 
         # adjusting absolute recruitment at each site by dividing by the area
         @views p.rec[:, :] .= (potential_settler_cover .* ((fec_scope .* LPs) * TP_data)) ./ site_area
-
+        
         @views dhw_step .= dhw_scen[tstep, :]  # subset of DHW for given timestep
 
         in_shade_years = (shade_start_year <= tstep) && (tstep <= (shade_start_year + shade_years - 1))
@@ -460,7 +463,7 @@ function run_scenario(domain::Domain, param_set::NamedTuple, corals::DataFrame, 
         if is_guided
             # Update dMCDA values
             mcda_vars.damprob .= @view mwaves[tstep, :, :]
-            mcda_vars.heatstressprob .= dhw_step
+            #mcda_vars.heatstressprob .= dhw_step
 
             mcda_vars.sumcover .= sum(cov_tmp, dims=1)  # dims: nsites * 1
 

@@ -70,7 +70,7 @@ function dMCDA(d_vars::DMCDA_vars, alg_ind::Int64, log_seed::Bool, log_shade::Bo
     strongpred = d_vars.strongpred[site_ids, :]
     centr = d_vars.centr[site_ids]
     damprob = d_vars.damprob[site_ids]
-    heatstressprob = d_vars.heatstressprob[site_ids]
+    heatstressprob = d_vars.heatstressprob[:,site_ids]
     sumcover = d_vars.sumcover[site_ids]
     maxcover = d_vars.maxcover[site_ids]
     area = d_vars.area[site_ids]
@@ -95,7 +95,7 @@ function dMCDA(d_vars::DMCDA_vars, alg_ind::Int64, log_seed::Bool, log_shade::Bo
     predec[predprior, 3] .= 1.0
 
     # Combine data into matrix
-    A = zeros(length(site_ids), 6)
+    A = zeros(length(site_ids), 7)
 
     A[:, 1] = site_ids  # column of site IDs
 
@@ -108,18 +108,21 @@ function dMCDA(d_vars::DMCDA_vars, alg_ind::Int64, log_seed::Bool, log_shade::Bo
     # Account for cases where no chance of damage or heat stress
     # if max > 0 then use damage probability from wave exposure
     A[:, 3] .= maximum(damprob) != 0 ? damprob / maximum(damprob) : damprob
+    @infiltrate
+    # max risk from heat exposure
+    A[:, 4] .= transpose(maximum(heatstressprob,dims=(1,2))[1] != 0 ? maximum(heatstressprob,dims=1)./maximum(heatstressprob,dims=(1,2)) : maximum(heatstressprob,dims=1))
 
-    # risk from heat exposure
-    A[:, 4] .= maximum(heatstressprob) != 0 ? heatstressprob / maximum(heatstressprob) : heatstressprob
+    # median risk from heat exposure
+    A[:, 5] .= transpose(median(heatstressprob,dims=(1,2))[1] != 0 ? median(heatstressprob,dims=1)./maximum(median(heatstressprob,dims=1),dims=2) : median(heatstressprob,dims=1))
 
     # priority predecessors
-    A[:, 5] .= predec[:, 3]
+    A[:, 6] .= predec[:, 3]
 
-    A[:, 6] = (maxcover - sumcover) ./ maxcover # proportion of cover compared to max possible cover
+    A[:, 7] = (maxcover - sumcover) ./ maxcover # proportion of coral real estate compared to max possible cover
 
     # set any infs to zero
-    A[maxcover .== 0, 6] .= 0.0
-
+    A[maxcover .== 0, 7] .= 0.0
+    @infiltrate 
     # Filter out sites that have high risk of wave damage, specifically
     # exceeding the risk tolerance
     A[A[:, 3] .> risktol, 3] .= NaN
@@ -130,8 +133,8 @@ function dMCDA(d_vars::DMCDA_vars, alg_ind::Int64, log_seed::Bool, log_shade::Bo
     A = A[vec(.!any(isnan.(A), dims=2)), :]
 
     # Set up SE and SH to be same size as A
-    SE = zeros(size(A, 1), 6)
-    SH = zeros(size(A, 1), 6)
+    SE = zeros(size(A, 1), 7)
+    SH = zeros(size(A, 1), 7)
 
     if isempty(A)
         # if all rows have nans and A is empty, abort mission
@@ -146,31 +149,36 @@ function dMCDA(d_vars::DMCDA_vars, alg_ind::Int64, log_seed::Bool, log_shade::Bo
     ## Seeding - Filtered set
     # define seeding weights
     if log_seed
-        wse = [1, wtconseed, wtwaves, wtheat, wtpredecseed, wtlocover]
+        wse = [1, wtconseed, wtwaves, wtheat, wtheat, wtpredecseed, wtlocover]
         wse[2:end] .= mcda_normalize(wse[2:end])
 
         # define seeding decision matrix
         SE[:, 1:2] = A[:, 1:2]  # sites column (remaining), centrality
 
         SE[:, 3] = (1.0 .- A[:, 3])  # compliment of damage risk
-        SE[:, 4] = (1.0 .- A[:, 4])  # compliment of wave risk
-        SE[:, 5:6] = A[:, 5:6]  # priority predecessors, coral real estate relative to max capacity
+        SE[:, 4] = (1.0 .- A[:, 4])  # compliment of max heat risk
+        SE[:, 5] = (1.0 .- A[:, 5])  # compliment of median heat risk
+        SE[:, 6:7] = A[:, 6:7]  # priority predecessors, coral real estate relative to max capacity
 
-        # remove sites at maximum carrying capacity, take log to emphasize importance of space for seeding
-        SE = SE[vec(A[:, 6] .> 0), :]
-        SE[:,6] = -log10.(SE[:,6])
+        # remove sites at maximum carrying capacity, take 10 power to emphasize importance of space for seeding
+        SE = SE[vec(A[:, 7] .> 0), :]
+        cover_temp = zeros(length(SE[:,7]))
+        for k = 1:length(cover_temp)
+            cover_temp[k] = 10^SE[k,7]
+        end
+        SE[:,7] = cover_temp
     end
 
     if log_shade
         ## Shading filtered set
         # define shading weights
-        wsh = [1, wtconshade, wtwaves, wtheat, wtpredecshade, wthicover]
+        wsh = [1, wtconshade, wtwaves, wtheat, wtheat, wtpredecshade, wthicover]
         wsh[2:end] .= mcda_normalize(wsh[2:end])
 
         SH[:, 1:2] = A[:, 1:2] # sites column (remaining), absolute centrality
         SH[:, 3] = (1.0 .- A[:, 3]) # complimentary of wave damage risk
-        SH[:, 4:5] = A[:, 4:5] # complimentary of heat damage risk, priority predecessors
-        SH[:, 6] = (1.0 .- A[:, 6]) # coral cover relative to max capacity
+        SH[:, 4:6] = A[:, 4:6] # complimentary of heat damage risk, priority predecessors
+        SH[:, 7] = (1.0 .- A[:, 7]) # coral cover relative to max capacity
     end
 
     if alg_ind == 1
