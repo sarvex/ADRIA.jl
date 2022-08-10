@@ -1,5 +1,6 @@
 """Objects and methods for Dynamic Multi-Criteria Decision Analysis/Making"""
 
+using Infiltrator
 
 struct DMCDA_vars  # {V, I, F, M} where V <: Vector
     site_ids  # ::V
@@ -108,7 +109,7 @@ function dMCDA(d_vars::DMCDA_vars, alg_ind::Int64, log_seed::Bool, log_shade::Bo
     # Account for cases where no chance of damage or heat stress
     # if max > 0 then use damage probability from wave exposure
     A[:, 3] .= maximum(damprob) != 0 ? damprob / maximum(damprob) : damprob
-    @infiltrate
+
     # max risk from heat exposure
     A[:, 4] .= transpose(maximum(heatstressprob,dims=(1,2))[1] != 0 ? maximum(heatstressprob,dims=1)./maximum(heatstressprob,dims=(1,2)) : maximum(heatstressprob,dims=1))
 
@@ -122,7 +123,7 @@ function dMCDA(d_vars::DMCDA_vars, alg_ind::Int64, log_seed::Bool, log_shade::Bo
 
     # set any infs to zero
     A[maxcover .== 0, 7] .= 0.0
-    @infiltrate 
+ 
     # Filter out sites that have high risk of wave damage, specifically
     # exceeding the risk tolerance
     A[A[:, 3] .> risktol, 3] .= NaN
@@ -162,11 +163,8 @@ function dMCDA(d_vars::DMCDA_vars, alg_ind::Int64, log_seed::Bool, log_shade::Bo
 
         # remove sites at maximum carrying capacity, take 10 power to emphasize importance of space for seeding
         SE = SE[vec(A[:, 7] .> 0), :]
-        cover_temp = zeros(length(SE[:,7]))
-        for k = 1:length(cover_temp)
-            cover_temp[k] = 10^SE[k,7]
-        end
-        SE[:,7] = cover_temp
+        SE[:,7] = 10 .^ SE[:,7]./maximum(10 .^ SE[:,7])
+
     end
 
     if log_shade
@@ -179,6 +177,7 @@ function dMCDA(d_vars::DMCDA_vars, alg_ind::Int64, log_seed::Bool, log_shade::Bo
         SH[:, 3] = (1.0 .- A[:, 3]) # complimentary of wave damage risk
         SH[:, 4:6] = A[:, 4:6] # complimentary of heat damage risk, priority predecessors
         SH[:, 7] = (1.0 .- A[:, 7]) # coral cover relative to max capacity
+
     end
 
     if alg_ind == 1
