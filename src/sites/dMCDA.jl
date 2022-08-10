@@ -1,7 +1,5 @@
 """Objects and methods for Dynamic Multi-Criteria Decision Analysis/Making"""
 
-using Infiltrator
-
 struct DMCDA_vars  # {V, I, F, M} where V <: Vector
     site_ids  # ::V
     nsiteint  # ::I
