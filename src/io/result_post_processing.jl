@@ -71,42 +71,49 @@ function create_BI_format_file(rs::ResultSet, file_loc::String)
     perms = n_years * n_sites * n_scens
     # storage dataframe
     data_sum_df = DataFrame(Model=repeat([""], outer=perms), SSP=repeat([""], outer=perms),
-        SiteID=repeat([""], outer=perms), Latitude=repeat([0.0], outer=perms),
-        Longitude=repeat([0.0], outer=perms), Year=repeat([0], outer=perms),
-        DeployYear=repeat([0], outer=perms), SeedLevel=repeat([0.0], outer=perms),
-        DHWenhancement=repeat([0.0], outer=perms), FogLevel=repeat([0], outer=perms),
-        SiteArea=repeat([0.0], outer=perms), Kvalue=repeat([0.0], outer=perms),
-        Guided=repeat([0], outer=perms), MeanCoralCoverProp=repeat([parse(Float32, "0")], outer=perms),
+        ScenarioID=repeat([""], outer=perms),SiteID=repeat([""], outer=perms), 
+        Latitude=repeat([0.0], outer=perms),Longitude=repeat([0.0], outer=perms), 
+        Year=repeat([0], outer=perms),DeployYear=repeat([0], outer=perms), 
+        SeedLevel=repeat([0.0], outer=perms),DHWenhancement=repeat([0.0], outer=perms), 
+        FogLevel=repeat([0], outer=perms),SiteArea=repeat([0.0], outer=perms), 
+        Kvalue=repeat([0.0], outer=perms),Guided=repeat([0], outer=perms), 
+        MeanCoralCoverProp=repeat([parse(Float32, "0")], outer=perms),
         DiffMeanCoralCoverProp=repeat([parse(Float32, "0")], outer=perms),
         ShelterVolume=repeat([parse(Float32, "0")], outer=perms),
         DiffShelterVolume=repeat([parse(Float32, "0")], outer=perms))
     #,Juveniles=Float64[],DiffJuveniles=Float64[],
     #RCI=Float64[],DiffRCI=Float64[])
-    @infiltrate
+
     # find conterfactual index
     cond = ((rs.inputs.guided .== 0) .& (rs.inputs.seed_TA .== 0) .& (rs.inputs.seed_CA .== 0) .& (rs.inputs.fogging .== 0) .& (rs.inputs.SRM .== 0) .& (rs.inputs.a_adapt .== 0) .& (rs.inputs.n_adapt .== 0))
     #counter_ind = rownumber.(eachrow(rs.inputs[cond, :]))
     count = 1
 
     # guided or unguided
-    guided = rs.inputs.guided .> 0 ? guided .= 1 : guided .= 0
+    guided = zeros(1,length(rs.inputs.guided))
+    guided[rs.inputs.guided.>0] .= 1
     # seeding level including both species
-    seed = rs.inputs.seed_TA + rs.inputs.seed_CA
+    seed = rs.inputs.seed_TA .+ rs.inputs.seed_CA
     # fogging or no fogging
-    rs.inputs.fogging .> 0 ? fog .= 1 : fog .= 0
-
-    for t in collect(1:n_years)
+    fog = zeros(1,length(rs.inputs.fogging))
+    fog[rs.inputs.fogging.>0] .= 1
+    count_id = 0
+    for sce in collect(1:n_scens) 
         for si in collect(1:n_sites)
-            for sce in collect(1:n_scens)              
-                @infiltrate
-                temp_counter_ind = cond.&(rs.inputs.dhw_scenario.==rs.inputs.dhw_scenario[sce])
+            count_id = count_id+1   
+            scen_id = "scen_id"*string(count_id)  
+            for t in collect(1:n_years)  
+
+                temp_counter_cond = cond.&(rs.inputs.dhw_scenario.==rs.inputs.dhw_scenario[sce])
+                temp_counter_ind = rownumber.(eachrow(rs.inputs[temp_counter_cond, :]))
                 # add scenario to structure
-                data_sum_df[count, :] = (model, ssp, site_ids[si], centroids[si][2, 1], centroids[si][1, 1], years[t], Int(rs.inputs.seed_year_start[sce] + 2024),
+                data_sum_df[count, :] = (model, ssp, scen_id, site_ids[si], centroids[si][2, 1], centroids[si][1, 1], years[t], Int(rs.inputs.seed_year_start[sce] + 2024),
                     seed[sce], rs.inputs.a_adapt[sce], fog[sce], sitearea[si], kvals[si], guided[sce],
-                    rel_cover[years_ints[t], si, sce] * 100, (rel_cover[years_ints[t], si, sce].-rel_cover[years_ints[t], si, temp_counter_ind)[1] * 100,
+                    rel_cover[years_ints[t], si, sce] * 100, (rel_cover[years_ints[t], si, sce].-rel_cover[years_ints[t], si, temp_counter_ind])[1] * 100,
                     sheltervol[years_ints[t], si, sce] * 100, (sheltervol[years_ints[t], si, sce].-sheltervol[years_ints[t], si, temp_counter_ind])[1] * 100)
                 #juveniles[years_ints[t],si,sce],juveniles[years_ints[t],si,sce]-juveniles[years_ints[t],si,0],
                 #rci[years_ints[t],si,sce],rci[years_ints[t],si,sce]-rci[years_ints[t],si,0]))
+
                 count = count + 1
             end
         end
