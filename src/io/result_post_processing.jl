@@ -85,7 +85,7 @@ function create_BI_format_file(rs::ResultSet, file_loc::String)
     @infiltrate
     # find conterfactual index
     cond = ((rs.inputs.guided .== 0) .& (rs.inputs.seed_TA .== 0) .& (rs.inputs.seed_CA .== 0) .& (rs.inputs.fogging .== 0) .& (rs.inputs.SRM .== 0) .& (rs.inputs.a_adapt .== 0) .& (rs.inputs.n_adapt .== 0))
-    counter_ind = rownumber.(eachrow(rs.inputs[cond, :]))
+    #counter_ind = rownumber.(eachrow(rs.inputs[cond, :]))
     count = 1
 
     # guided or unguided
@@ -99,7 +99,7 @@ function create_BI_format_file(rs::ResultSet, file_loc::String)
         for si in collect(1:n_sites)
             for sce in collect(1:n_scens)              
                 @infiltrate
-                temp_counter_ind = cond.&(rs.inputs.dhw_scenario[counter_ind].==rs.inputs.dhw_scenario[sce])
+                temp_counter_ind = cond.&(rs.inputs.dhw_scenario.==rs.inputs.dhw_scenario[sce])
                 # add scenario to structure
                 data_sum_df[count, :] = (model, ssp, site_ids[si], centroids[si][2, 1], centroids[si][1, 1], years[t], Int(rs.inputs.seed_year_start[sce] + 2024),
                     seed[sce], rs.inputs.a_adapt[sce], fog[sce], sitearea[si], kvals[si], guided[sce],
