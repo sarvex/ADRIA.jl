@@ -8,6 +8,8 @@ using Statistics
 using CSV
 using DataFrames
 
+using Infiltrator
+
 """
     RCP_to_SSP(rcp)
 
@@ -80,27 +82,29 @@ function create_BI_format_file(rs::ResultSet, file_loc::String)
         DiffShelterVolume=repeat([parse(Float32, "0")], outer=perms))
     #,Juveniles=Float64[],DiffJuveniles=Float64[],
     #RCI=Float64[],DiffRCI=Float64[])
-
+    @infiltrate
     # find conterfactual index
     cond = ((rs.inputs.guided .== 0) .& (rs.inputs.seed_TA .== 0) .& (rs.inputs.seed_CA .== 0) .& (rs.inputs.fogging .== 0) .& (rs.inputs.SRM .== 0) .& (rs.inputs.a_adapt .== 0) .& (rs.inputs.n_adapt .== 0))
     counter_ind = rownumber.(eachrow(rs.inputs[cond, :]))
     count = 1
+
+    # guided or unguided
+    guided = rs.inputs.guided .> 0 ? guided .= 1 : guided .= 0
+    # seeding level including both species
+    seed = rs.inputs.seed_TA + rs.inputs.seed_CA
+    # fogging or no fogging
+    rs.inputs.fogging .> 0 ? fog .= 1 : fog .= 0
+
     for t in collect(1:n_years)
         for si in collect(1:n_sites)
-            for sce in collect(1:n_scens)
-
-                # guided or unguided
-                rs.inputs.guided[sce] > 0 ? guided = 1 : guided = 0
-                # seeding level including both species
-                seed = rs.inputs.seed_TA[sce] + rs.inputs.seed_CA[sce]
-                # fogging or no fogging
-                rs.inputs.fogging[sce] > 0 ? fog = 1 : fog = 0
-
+            for sce in collect(1:n_scens)              
+                @infiltrate
+                temp_counter_ind = cond.&(rs.inputs.dhw_scenario[counter_ind].==rs.inputs.dhw_scenario[sce])
                 # add scenario to structure
                 data_sum_df[count, :] = (model, ssp, site_ids[si], centroids[si][2, 1], centroids[si][1, 1], years[t], Int(rs.inputs.seed_year_start[sce] + 2024),
-                    seed, rs.inputs.a_adapt[sce], fog, sitearea[si], kvals[si], guided,
-                    rel_cover[years_ints[t], si, sce] * 100, (rel_cover[years_ints[t], si, sce].-rel_cover[years_ints[t], si, counter_ind])[1] * 100,
-                    sheltervol[years_ints[t], si, sce] * 100, (sheltervol[years_ints[t], si, sce].-sheltervol[years_ints[t], si, counter_ind])[1] * 100)
+                    seed[sce], rs.inputs.a_adapt[sce], fog[sce], sitearea[si], kvals[si], guided[sce],
+                    rel_cover[years_ints[t], si, sce] * 100, (rel_cover[years_ints[t], si, sce].-rel_cover[years_ints[t], si, temp_counter_ind)[1] * 100,
+                    sheltervol[years_ints[t], si, sce] * 100, (sheltervol[years_ints[t], si, sce].-sheltervol[years_ints[t], si, temp_counter_ind])[1] * 100)
                 #juveniles[years_ints[t],si,sce],juveniles[years_ints[t],si,sce]-juveniles[years_ints[t],si,0],
                 #rci[years_ints[t],si,sce],rci[years_ints[t],si,sce]-rci[years_ints[t],si,0]))
                 count = count + 1
