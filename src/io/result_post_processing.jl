@@ -106,11 +106,14 @@ function create_BI_format_file(rs::ResultSet, file_loc::String)
 
                 temp_counter_cond = cond.&(rs.inputs.dhw_scenario.==rs.inputs.dhw_scenario[sce])
                 temp_counter_ind = rownumber.(eachrow(rs.inputs[temp_counter_cond, :]))
+                if sce == 137
+                    @infiltrate
+                end
                 # add scenario to structure
                 data_sum_df[count, :] = (model, ssp, scen_id, site_ids[si], centroids[si][2, 1], centroids[si][1, 1], years[t], Int(rs.inputs.seed_year_start[sce] + 2024),
-                    seed[sce], rs.inputs.a_adapt[sce], fog[sce], sitearea[si], kvals[si], guided[sce],
-                    rel_cover[years_ints[t], si, sce] * 100, (rel_cover[years_ints[t], si, sce].-rel_cover[years_ints[t], si, temp_counter_ind])[1] * 100,
-                    sheltervol[years_ints[t], si, sce] * 100, (sheltervol[years_ints[t], si, sce].-sheltervol[years_ints[t], si, temp_counter_ind])[1] * 100)
+                    seed[sce], rs.inputs.a_adapt[sce], fog[sce], sitearea[si]/(1000)^2, kvals[si], guided[sce],
+                    rel_cover[years_ints[t], si, sce], (rel_cover[years_ints[t], si, sce].-rel_cover[years_ints[t], si, temp_counter_ind])[1] * 100,
+                    sheltervol[years_ints[t], si, sce], (sheltervol[years_ints[t], si, sce].-sheltervol[years_ints[t], si, temp_counter_ind])[1] * 100)
                 #juveniles[years_ints[t],si,sce],juveniles[years_ints[t],si,sce]-juveniles[years_ints[t],si,0],
                 #rci[years_ints[t],si,sce],rci[years_ints[t],si,sce]-rci[years_ints[t],si,0]))
 
