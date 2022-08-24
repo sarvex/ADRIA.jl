@@ -24,7 +24,7 @@ function RCP_to_SSP(rcp::String)::String
     elseif rcp == "45"
         ssp = "SSP2"
     elseif rcp == "60"
-        ssp = "SSP3"
+        ssp = "SSP4"
     else
         throw("Unknown RCP value")
     end
