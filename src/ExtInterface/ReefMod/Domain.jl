@@ -157,7 +157,7 @@ end
 - `loc_ids` : location ids
 
 # Returns
-NamedDimsArray[locations, years, members]
+NamedDimsArray[years, locations, members]
 """
 function load_cyclones(::Type{ReefModDomain}, data_path::String, loc_ids::Vector{String})::NamedDimsArray
     # NOTE: This reads from the provided CSV files
@@ -177,7 +177,7 @@ function load_cyclones(::Type{ReefModDomain}, data_path::String, loc_ids::Vector
     end
 
     # Mean over all years
-    return NamedDimsArray(cyc_data, locs=loc_ids, years=1:num_years, members=1:length(cyc_files))
+    return NamedDimsArray(permutedims(cyc_data, (2, 1, 3)), years=1:num_years, locs=loc_ids, members=1:length(cyc_files))
 end
 
 """
@@ -189,7 +189,7 @@ end
 - `loc_ids` : location ids
 
 # Returns
-NamedDimsArray[locations, species, members]
+NamedDimsArray[locations, species]
 """
 function load_initial_cover(::Type{ReefModDomain}, data_path::String, loc_ids::Vector{String})::NamedDimsArray
     icc_path = joinpath(data_path, "initial")
@@ -198,14 +198,18 @@ function load_initial_cover(::Type{ReefModDomain}, data_path::String, loc_ids::V
         ArgumentError("No cyclone data files found in: $(icc_path)")
     end
 
-    # Shape is locations, members, species
+    # Shape is locations, repeats, species
     icc_data = zeros(length(loc_ids), 20, length(icc_files))
     for (i, fn) in enumerate(icc_files)
         icc_data[:, :, i] = Matrix(CSV.read(fn, DataFrame; drop=[1], header=false))
     end
 
-    # Reorder dims to: locations, species, members
-    return NamedDimsArray(permutedims(icc_data, (1, 3, 2)), locs=loc_ids, species=1:length(icc_files), members=1:20)
+    # Take the mean over repeats, as suggested by YM (pers comm. 2023-02-27 12:40pm AEDT)
+    # Convert from percent to relative values
+    icc_data = dropdims(mean(icc_data, dims=2), dims=2) ./ 100.0
+
+    # Reorder dims to: locations, species
+    return NamedDimsArray(icc_data, locs=loc_ids, species=1:length(icc_files))
 end
 
 
