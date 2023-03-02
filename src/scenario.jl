@@ -418,6 +418,8 @@ function run_model(domain::Domain, param_set::NamedDimsArray, corals::DataFrame,
         weights = DataFrame()
         # Prep site selection
         mcda_vars = DMCDA_vars(domain, sim_params.seed_criteria_names, sim_params.shade_criteria_names, dist_vars, weights, thresholds)
+        criteria_df = create_criteria_df(site_ids, coral_cover,
+            coral_space, conn_in, heat_stress, wave_stress, conn_out, zones, predec)
     end
 
     #### End coral constants
@@ -496,7 +498,7 @@ function run_model(domain::Domain, param_set::NamedDimsArray, corals::DataFrame,
         if is_guided && in_seed_years
             mcda_vars.sum_cover .= site_coral_cover
             (prefseedsites, prefshadesites, rankings) = guided_site_selection(mcda_vars, MCDA_approach,
-                seed_decision_years[tstep], shade_decision_years[tstep],
+                criteria_df, seed_decision_years[tstep], shade_decision_years[tstep],
                 prefseedsites, prefshadesites, rankings)
 
             # Log site ranks
