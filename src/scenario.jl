@@ -516,12 +516,19 @@ function run_model(domain::Domain, param_set::NamedDimsArray, corals::DataFrame,
         @views dhw_t .= dhw_scen[tstep, :]  # subset of DHW for given timestep
         if is_guided && (in_seed_years || in_shade_years)
             # Update dMCDA values
-            mcda_vars.heat_stress_prob .= dhw_t
-            mcda_vars.dam_prob .= sum(Sw_t[tstep, :, :], dims=1)'
+            wave_stress = sum(Sw_t[tstep, :, :], dims=1)'
+            criteria_df["wave_stress"] .= env_stress_criteria(wave_stress)
+            criteria_df["heat_stress"] .= env_stress_criteria(dhw_t)
+            criteria_df["connectivity_in"] .= connectivity_criteria(domain.in_conn)
+            criteria_df["connectivity_out"] .= connectivity_criteria(domain.out_conn)
+
         end
 
         if is_guided && in_seed_years
-            mcda_vars.sum_cover .= site_coral_cover
+            coral_cover, coral_space = coral_cover_criteria(site_data, site_coral_cover)
+            criteria_df["coral_space"] .= coral_space
+            criteria_df["coral_cover"] .= coral_cover
+
             (prefseedsites, prefshadesites, rankings) = guided_site_selection(mcda_vars, MCDA_approach,
                 criteria_df, seed_decision_years[tstep], shade_decision_years[tstep],
                 prefseedsites, prefshadesites, rankings)
