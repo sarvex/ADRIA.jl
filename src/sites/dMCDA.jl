@@ -141,7 +141,7 @@ Align a vector of site rankings to match the indicated order in `s_order`.
 function align_rankings!(rankings::Array, s_order::Matrix, col::Int64)::Nothing
     # Fill target ranking column
     for (i, site_id) in enumerate(s_order[:, 1])
-        rankings[findall(rankings[:, 1] .== site_id), col] .= s_order[i, 3]
+        rankings[rankings[:, 1].==site_id, col] .= s_order[i, 3]
     end
 
     return
