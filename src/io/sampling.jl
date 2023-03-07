@@ -290,6 +290,37 @@ function _deactivate_interventions(to_update::DataFrame)::Nothing
 end
 
 
+"""
+    fix_factor(d::Domain, factor::Symbol)
+    fix_factor(d::Domain, factor::Symbol, val::Real)
+
+Fix a factor so it gets ignored for the purpose of constructing samples.
+If no value is provided, the default is used.
+"""
+function fix_factor!(d::Domain, factor::Symbol)::Nothing
+    params = DataFrame(d.model)
+    default_val = params[params.fieldname.==factor, :val]
+    params[params.fieldname.==factor, :lower_bound] .= default_val
+    params[params.fieldname.==factor, :upper_bound] .= default_val
+
+    bnds = params[params.fieldname.==factor, :bounds][1]
+    new_bnds = Tuple(fill(default_val, length(bnds)))
+    params[params.fieldname.==factor, :bounds] .= [new_bnds]
+
+    update!(d, params)
+end
+function fix_factor!(d::Domain, factor::Symbol, val::Real)::Nothing
+    params = DataFrame(d.model)
+    params[params.fieldname.==factor, :val] .= val
+
+    bnds = params[params.fieldname.==factor, :bounds][1]
+    new_bnds = Tuple(fill(val, length(bnds)))
+    params[params.fieldname.==factor, :bounds] .= [new_bnds]
+
+    update!(d, params)
+end
+
+
 _unzip(a) = map(x -> getfield.(a, x), fieldnames(eltype(a)))
 
 
