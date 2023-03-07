@@ -405,7 +405,7 @@ end
 
 Get site area for the given domain.
 """
-function site_area(domain::ADRIADomain)::Vector{Float64}
+function site_area(domain::Domain)::Vector{Float64}
     return domain.site_data.area
 end
 
@@ -414,7 +414,7 @@ end
 
 Get maximum coral cover area for the given domain in absolute area.
 """
-function site_k_area(domain::ADRIADomain)::Vector{Float64}
+function site_k_area(domain::Domain)::Vector{Float64}
     return site_k(domain) .* site_area(domain)
 end
 
@@ -492,7 +492,7 @@ Assumes all `val` and `bounds` are to be updated.
 - `dom` : Domain
 - `spec` : updated model specification
 """
-function update!(dom::ADRIADomain, spec::DataFrame)::Nothing
+function update!(dom::Domain, spec::DataFrame)::Nothing
     # ModelParameters.update!(dom.model, spec)
     dom.model[:val] = spec.val
     dom.model[:bounds] = spec.bounds
