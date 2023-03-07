@@ -165,7 +165,9 @@ function sample_site_selection(d::Domain, n::Int, sampler=SobolSample())::DataFr
     subset_spec = component_params(d.model, [EnvironmentalLayer, Intervention, Criteria])
 
     # Only sample guided intervention scenarios
-    _adjust_guided_lower_bound!(subset_spec, 1)
+    if subset_spec[subset_spec.fieldname.==:guided, :lower_bound][1] .< 1
+        _adjust_guided_lower_bound!(subset_spec, 1)
+    end
 
     # Create and fill scenario spec
     # Only Intervention, EnvironmentalLayer and Criteria factors are perturbed,
