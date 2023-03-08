@@ -808,7 +808,7 @@ function run_site_selection(dom::Domain, scenarios::DataFrame, sum_cover::Abstra
         depth_criteria = (dom.site_data.depth_med .<= scen.max_depth) .& (dom.site_data.depth_med .>= scen.depth_min)
         depth_priority = findall(depth_criteria)
 
-        ranks_temp = site_selection(
+        ranks_store(scenarios=cover_ind, sites=dom.site_ids[depth_criteria]) .= site_selection(
             dom,
             scen,
             wave_scens[timestep, :, scen.wave_scenario],
@@ -817,7 +817,6 @@ function run_site_selection(dom::Domain, scenarios::DataFrame, sum_cover::Abstra
             sum_cover[cover_ind, :],
             area_to_seed
         )
-        ranks_store(scenarios=cover_ind, sites=dom.site_ids[depth_criteria]) .= ranks_temp
     end
 
     return ranks_store
