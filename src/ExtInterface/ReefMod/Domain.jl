@@ -253,6 +253,8 @@ function load_domain(::Type{ReefModDomain}, fn_path::String, RCP::String)::ReefM
     # Add GBRMPA zone type info as well
     gbr_zt_path = joinpath(data_files, "region", "gbrmpa_zone_type.csv")
     gbr_zone_types = CSV.read(gbr_zt_path, DataFrame; types=String)
+
+    # Convert missing entries to empty string
     missing_rows = ismissing.(gbr_zone_types[:, "GBRMPA Zone Types"])
     gbr_zone_types[missing_rows, "GBRMPA Zone Types"] .= ""
     site_data[:, :zone_type] .= gbr_zone_types[:, "GBRMPA Zone Types"]
