@@ -790,37 +790,34 @@ Perform site selection for a given domain for multiple scenarios defined in a da
 - `ranks_store` : number of scenarios * sites * 3 (last dimension indicates: site_id, seed rank, shade rank)
     containing ranks for each scenario run.
 """
-function run_site_selection(domain::Domain, scenarios::DataFrame, sum_cover::AbstractArray, area_to_seed::Float64, timestep::Int64)
+function run_site_selection(dom::Domain, scenarios::DataFrame, sum_cover::AbstractArray, area_to_seed::Float64, timestep::Int64)
     ranks_store = NamedDimsArray(
-        zeros(nrow(scenarios), length(domain.site_ids), 3),
+        zeros(nrow(scenarios), length(dom.site_ids), 3),
         scenarios=1:nrow(scenarios),
-        sites=domain.site_ids,
+        sites=dom.site_ids,
         ranks=["site_id", "seed_rank", "shade_rank"],
     )
 
-    dhw_scens = domain.dhw_scens
-    wave_scens = domain.wave_scens
-    site_data = domain.site_data
+    dhw_scens = dom.dhw_scens
+    wave_scens = dom.wave_scens
 
     # Pre-calculate maximum depth to consider
     scenarios[:, "max_depth"] .= scenarios.depth_min .+ scenarios.depth_offset
 
-    for (cover_ind, scenario_criteria) in enumerate(eachrow(scenarios))
-        # depth_criteria = (site_data.depth_med .<= scenario_criteria.max_depth) .& (site_data.depth_med .>= scenario_criteria.depth_min)
-        # depth_priority = findall(depth_criteria)
-        depth_criteria = 1:length(domain.site_ids)
-        depth_priority = 1:length(domain.site_ids)
+    for (cover_ind, scen) in enumerate(eachrow(scenarios))
+        depth_criteria = (dom.site_data.depth_med .<= scen.max_depth) .& (dom.site_data.depth_med .>= scen.depth_min)
+        depth_priority = findall(depth_criteria)
 
         ranks_temp = site_selection(
-            domain,
-            scenario_criteria,
-            wave_scens[timestep, :, scenario_criteria.wave_scenario],
-            dhw_scens[timestep, :, scenario_criteria.dhw_scenario],
+            dom,
+            scen,
+            wave_scens[timestep, :, scen.wave_scenario],
+            dhw_scens[timestep, :, scen.dhw_scenario],
             depth_priority,
             sum_cover[cover_ind, :],
             area_to_seed
         )
-        ranks_store(scenarios=cover_ind, sites=domain.site_ids[depth_criteria]) .= ranks_temp
+        ranks_store(scenarios=cover_ind, sites=dom.site_ids[depth_criteria]) .= ranks_temp
     end
 
     return ranks_store
