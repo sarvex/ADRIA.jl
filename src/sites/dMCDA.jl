@@ -319,13 +319,14 @@ function guided_site_selection(
     # Force different sites to be selected
     site_ids = setdiff(site_ids, hcat(prefseedsites, prefshadesites))
     mod_n_ranks = min(size(rankingsin, 1), length(site_ids))
-    if mod_n_ranks < length(d_vars.site_ids) && length(rankingsin) != 0
+    if mod_n_ranks < length(criteria_df[:, "site_ids"]) && length(rankingsin) != 0
         rankingsin = rankingsin[in.(rankingsin[:, 1], [site_ids]), :]
         site_ids = rankingsin[:, 1]
     elseif length(rankingsin) != 0
         rankingsin = [site_ids zeros(Int64, length(site_ids)) zeros(Int64, length(site_ids))]
     end
 
+    criteria_df = criteria_df[in.(criteria_df[:, "site_ids"], [site_ids]), :]
     n_sites::Int64 = length(site_ids)
 
     # if no sites are available, abort
