@@ -257,7 +257,9 @@ function load_domain(::Type{ReefModDomain}, fn_path::String, RCP::String)::ReefM
     # Convert missing entries to empty string
     missing_rows = ismissing.(gbr_zone_types[:, "GBRMPA Zone Types"])
     gbr_zone_types[missing_rows, "GBRMPA Zone Types"] .= ""
-    site_data[:, :zone_type] .= gbr_zone_types[:, "GBRMPA Zone Types"]
+    zones = gbr_zone_types[:, "GBRMPA Zone Types"]
+    zones = replace.(zones, "Zone" => "", " " => "")
+    site_data[:, :zone_type] .= zones
 
     cyc_scens = load_cyclones(ReefModDomain, data_files, loc_ids)
 
