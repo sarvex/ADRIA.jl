@@ -73,8 +73,8 @@ function DMCDA_vars(domain::Domain, criteria::NamedDimsArray,
         waves,
         dhws,
         site_d.depth_med,
-        sum_cover,
-        site_k(domain),
+        sum_cover .* area .* site_k(domain),
+        area .* site_k(domain),
         area,
         criteria("coral_cover_tol") .* area_to_seed,
         criteria("deployed_coral_risk_tol"),
@@ -247,7 +247,7 @@ function create_decision_matrix(site_ids, in_conn, out_conn, sum_cover, max_cove
     A[:, 7] .= zones_criteria
 
     # Proportion of empty space (no coral) compared to max possible cover
-    A[:, 8] = max.((max_cover - sum_cover), 0.0) .* area
+    A[:, 8] = max.((max_cover - sum_cover), 0.0)  # .* area
 
     A[:, 9] = site_depth
 
