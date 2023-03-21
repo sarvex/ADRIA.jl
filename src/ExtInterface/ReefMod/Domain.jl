@@ -277,6 +277,16 @@ function load_domain(::Type{ReefModDomain}, fn_path::String, RCP::String)::ReefM
 end
 
 
+"""
+    site_k(dom::ReefModDomain)::Vector{Float64}
+
+Get maximum coral cover area as a proportion of site area.
+"""
+function site_k(dom::ReefModDomain)::Vector{Float64}
+    return dom.site_data.k
+end
+
+
 # """
 #     switch_RCPs!(d::ReefModDomain, RCP::String)::Domain
 
