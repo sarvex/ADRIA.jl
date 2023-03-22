@@ -293,9 +293,25 @@ end
 """
     fix_factor(d::Domain, factor::Symbol)
     fix_factor(d::Domain, factor::Symbol, val::Real)
+    fix_factor(d::Domain, factors...)
 
 Fix a factor so it gets ignored for the purpose of constructing samples.
 If no value is provided, the default is used.
+
+Note: Changes are permanent. To reset, either specify the original value(s)
+      or reload the Domain.
+
+# Examples
+```julia
+# Fix `guided` to default value
+fix_factor!(dom, :guided)
+
+# Fix `guided` to specified value
+fix_factor!(dom, :guided, 3)
+
+# Fix specified factors to their paired values
+fix_factor!(dom, :guided=>3, :seed_TA=>1e6)
+```
 """
 function fix_factor!(d::Domain, factor::Symbol)::Nothing
     params = DataFrame(d.model)
@@ -318,6 +334,11 @@ function fix_factor!(d::Domain, factor::Symbol, val::Real)::Nothing
     params[params.fieldname.==factor, :bounds] .= [new_bnds]
 
     update!(d, params)
+end
+function fix_factor!(d::Domain, factors::Pair{Symbol,Real}...)
+    for (factor, val) in factors
+        fix_factor!(d, factor, val)
+    end
 end
 
 
