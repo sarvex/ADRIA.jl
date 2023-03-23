@@ -234,29 +234,36 @@ ReefModDomain
 """
 function load_domain(::Type{ReefModDomain}, fn_path::String, RCP::String)::ReefModDomain
     data_files = joinpath(fn_path, "data_files")
-    dhw_scens = load_DHW(ReefModDomain, data_files, RCP)
-    loc_ids = axiskeys(dhw_scens)[2]
-
-    conn_data = load_connectivity(ReefModDomain, data_files, loc_ids)
-    in_conn, out_conn, strong_pred = ADRIA.connectivity_strength(conn_data)
+    id_list = CSV.read(joinpath(data_files, "id", "id_list_Dec_2022_151222_check_corrected_extra_column_220323.csv"), DataFrame, header=false)
 
     site_data = GDF.read(joinpath(data_files, "region", "reefmod_gbr.gpkg"))
-    site_dist, med_site_dist = ADRIA.site_distances(site_data)
-    site_id_col = "LOC_NAME_S"
-    unique_site_id_col = "LOC_NAME_S"
-    init_coral_cover = load_initial_cover(ReefModDomain, data_files, loc_ids)
-    site_ids = site_data[:, unique_site_id_col]
 
-    id_list = CSV.read(joinpath(data_files, "id", "id_list_Dec_2022_151222.csv"), DataFrame, header=false)
-
-    # Re-order spatial data to match RME dataset
     # MANUAL CORRECTION
     site_data[site_data.LABEL_ID.=="20198", :LABEL_ID] .= "20-198"
+
+    # orig_id_order = site_data.LOC_NAME_S
     id_order = [first(findall(x .== site_data.LABEL_ID)) for x in string.(id_list[:, 1])]
     site_data = site_data[id_order, :]
 
-    # Check that the two lists of location ids are identical
+    # Check that the order of the two lists of location ids are identical
     @assert isempty(findall(site_data.LABEL_ID .!= id_list[:, 1]))
+
+    dhw_scens = load_DHW(ReefModDomain, data_files, RCP)  # Reorder to match id_list
+    loc_ids = axiskeys(dhw_scens)[2]
+
+    conn_data = load_connectivity(ReefModDomain, data_files, loc_ids)
+
+    # Reorder to match id_list order
+    dhw_scens = dhw_scens[:, id_order, :]
+    conn_data = conn_data[id_order, id_order]
+
+    in_conn, out_conn, strong_pred = ADRIA.connectivity_strength(conn_data)
+
+    site_dist, med_site_dist = ADRIA.site_distances(site_data)
+    site_id_col = "LOC_NAME_S"
+    unique_site_id_col = "LOC_NAME_S"
+    init_coral_cover = load_initial_cover(ReefModDomain, data_files, loc_ids)[id_order, :]
+    site_ids = site_data[:, unique_site_id_col]
 
     # Convert area in km² to m²
     site_data[:, :area] .= id_list[:, 2] * 1e6
@@ -277,9 +284,12 @@ function load_domain(::Type{ReefModDomain}, fn_path::String, RCP::String)::ReefM
     gbr_zone_types[missing_rows, "GBRMPA Zone Types"] .= ""
     zones = gbr_zone_types[:, "GBRMPA Zone Types"]
     zones = replace.(zones, "Zone" => "", " " => "")
+
+    zones = zones[id_order, :]  # Reorder to match id list
     site_data[:, :zone_type] .= zones
 
     cyc_scens = load_cyclones(ReefModDomain, data_files, loc_ids)
+    cyc_scens = cyc_scens[:, id_order, :]  # Reorder to match id list
 
     model::Model = Model((EnvironmentalLayer(dhw_scens, cyc_scens), Intervention(), Criteria()))
 
