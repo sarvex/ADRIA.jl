@@ -55,6 +55,9 @@ Loads ReefMod DHW data as a datacube.
 - `data_path` : path to ReefMod data
 - `rcp` : RCP identifier
 - `timeframe` : range of years to represent.
+
+# Returns
+NamedDimsArray[timesteps, locs, member]
 """
 function load_DHW(::Type{ReefModDomain}, data_path::String, rcp::String, timeframe=(2022, 2100))::NamedDimsArray
     dhw_path = joinpath(data_path, "dhw")
@@ -116,6 +119,9 @@ Loads the average connectivity matrix.
 - `ReefModDomain`
 - `data_path` : path to ReefMod data
 - `loc_ids` : location ids
+
+# Returns
+NamedDimsArray[source, sinks]
 """
 function load_connectivity(::Type{ReefModDomain}, data_path::String, loc_ids::Vector{String})::NamedDimsArray
     conn_path = joinpath(data_path, "con_bin")
@@ -157,7 +163,7 @@ end
 - `loc_ids` : location ids
 
 # Returns
-NamedDimsArray[years, locations, members]
+NamedDimsArray[years, locs, members]
 """
 function load_cyclones(::Type{ReefModDomain}, data_path::String, loc_ids::Vector{String})::NamedDimsArray
     # NOTE: This reads from the provided CSV files
@@ -189,7 +195,7 @@ end
 - `loc_ids` : location ids
 
 # Returns
-NamedDimsArray[locations, species]
+NamedDimsArray[locs, species]
 """
 function load_initial_cover(::Type{ReefModDomain}, data_path::String, loc_ids::Vector{String})::NamedDimsArray
     icc_path = joinpath(data_path, "initial")
@@ -222,6 +228,9 @@ Load a Domain for use with ReefMod.
 - `ReefModDomain`
 - `fn_path`
 - `RCP`
+
+# Returns
+ReefModDomain
 """
 function load_domain(::Type{ReefModDomain}, fn_path::String, RCP::String)::ReefModDomain
     data_files = joinpath(fn_path, "data_files")
