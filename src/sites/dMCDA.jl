@@ -3,6 +3,29 @@
 using StatsBase
 using Distances
 using Combinatorics
+using JMcDM
+
+global method = [
+    [ArasMethod(), true],
+    [CocosoMethod(), true],
+    [CodasMethod(), true],
+    [CoprasMethod(), false],
+    [EdasMethod(), true],
+    [GreyMethod(), true],
+    [MabacMethod(), true],
+    [MaircaMethod(), false],
+    [MarcosMethod(), true],
+    [MooraMethod(), true],
+    [MoosraMethod(), true],
+    [PIVMethod(), true],
+    [PSIMethod(), true],
+    [ROVMethod(), true],
+    [SawMethod(), true],
+    [TopsisMethod(), true],
+    [VikorMethod(), false],
+    [WPMMethod(), true],
+    [WaspasMethod(), true]
+]
 
 struct DMCDA_vars  # {V, I, F, M} where V <: Vector
     site_ids  # ::V
@@ -162,7 +185,7 @@ end
 # Returns
 - `prefsites` : sites in order of their rankings
 """
-function rank_sites!(S, weights, rankings, n_site_int, mcda_func, rank_col)::Tuple{Vector{Int64},Matrix{Union{Float64,Int64}}}
+function rank_sites!(S, weights, rankings, n_site_int, alg_ind, rank_col)::Tuple{Vector{Int64},Matrix{Union{Float64,Int64}}}
     # Filter out all non-preferred sites
     selector = vec(.!all(S[:, 2:end] .== 0, dims=1))
 
@@ -170,11 +193,31 @@ function rank_sites!(S, weights, rankings, n_site_int, mcda_func, rank_col)::Tup
     weights = weights[selector]
     S = S[:, Bool[1, selector...]]
 
-    # Skip first column as this holds site index ids
-    S[:, 2:end] = mcda_normalize(S[:, 2:end])
-    S[:, 2:end] .= S[:, 2:end] .* repeat(weights', size(S[:, 2:end], 1), 1)
-    s_order = mcda_func(S)
+    if alg_ind == 1
+        mcda_func = order_ranking
+    elseif alg_ind == 2
+        mcda_func = topsis
+    elseif alg_ind == 3
+        mcda_func = vikor
+    elseif alg_ind == 16
+        mcda_func = method[alg_ind]
+    elseif alg_ind == 17
+        mcda_func = method[alg_ind]
+    end
 
+    if in(alg_ind, [1, 2, 3])
+        # Skip first column as this holds site index ids
+        S[:, 2:end] = mcda_normalize(S[:, 2:end])
+        S[:, 2:end] .= S[:, 2:end] .* repeat(weights', size(S[:, 2:end], 1), 1)
+        s_order = mcda_func(S)
+    elseif in(alg_ind, [16, 17])
+        fns = repeat([maximum], length(weights))
+        results = mcdm(MCDMSetting(S[:, 2:end], weights, fns), mcda_func[1])
+        s_order = Union{Float64,Int64}[Int.(S[:, 1]) results.scores 1:size(S, 1)]
+
+        # Reorder ranks (highest to lowest)
+        s_order .= sortslices(s_order, dims=1, by=x -> x[2], rev=mcda_func[2])
+    end
     last_idx = min(n_site_int, size(s_order, 1))
     prefsites = Int.(s_order[1:last_idx, 1])
 
@@ -184,11 +227,11 @@ function rank_sites!(S, weights, rankings, n_site_int, mcda_func, rank_col)::Tup
     return prefsites, s_order
 end
 
-function rank_seed_sites!(S, weights, rankings, n_site_int, mcda_func)::Tuple{Vector{Int64},Matrix{Union{Float64,Int64}}}
-    rank_sites!(S, weights, rankings, n_site_int, mcda_func, 2)
+function rank_seed_sites!(S, weights, rankings, n_site_int, alg_ind)::Tuple{Vector{Int64},Matrix{Union{Float64,Int64}}}
+    rank_sites!(S, weights, rankings, n_site_int, alg_ind, 2)
 end
-function rank_shade_sites!(S, weights, rankings, n_site_int, mcda_func)::Tuple{Vector{Int64},Matrix{Union{Float64,Int64}}}
-    rank_sites!(S, weights, rankings, n_site_int, mcda_func, 3)
+function rank_shade_sites!(S, weights, rankings, n_site_int, alg_ind)::Tuple{Vector{Int64},Matrix{Union{Float64,Int64}}}
+    rank_sites!(S, weights, rankings, n_site_int, alg_ind, 3)
 end
 
 """
@@ -493,21 +536,11 @@ function guided_site_selection(
         SH, wsh = create_shade_matrix(A, max_area, w_shade_conn, w_waves, w_heat, w_predec_shade, w_predec_zones_shade, w_high_cover)
     end
 
-    if alg_ind == 1
-        mcda_func = order_ranking
-    elseif alg_ind == 2
-        mcda_func = topsis
-    elseif alg_ind == 3
-        mcda_func = vikor
-    else
-        error("Unknown MCDA algorithm selected. Valid options are 1 (Order Ranking), 2 (TOPSIS) and 3 (VIKOR).")
-    end
-
     if log_seed && isempty(SE)
         prefseedsites = repeat([0], n_site_int)
     elseif log_seed
 
-        prefseedsites, s_order_seed = rank_seed_sites!(SE, wse, rankings, n_site_int, mcda_func)
+        prefseedsites, s_order_seed = rank_seed_sites!(SE, wse, rankings, n_site_int, alg_ind)
         if use_dist != 0
             prefseedsites, rankings = distance_sorting(prefseedsites, s_order_seed, d_vars.dist, min_dist, Int64(d_vars.top_n), rankings, 2)
         end
@@ -516,7 +549,7 @@ function guided_site_selection(
     if log_shade && isempty(SH)
         prefshadesites = repeat([0], n_site_int)
     elseif log_shade
-        prefshadesites, s_order_shade = rank_shade_sites!(SH, wsh, rankings, n_site_int, mcda_func)
+        prefshadesites, s_order_shade = rank_shade_sites!(SH, wsh, rankings, n_site_int, alg_ind)
         if use_dist != 0
             prefshadesites, rankings = distance_sorting(prefshadesites, s_order_shade, d_vars.dist, min_dist, Int64(d_vars.top_n), rankings, 3)
         end
