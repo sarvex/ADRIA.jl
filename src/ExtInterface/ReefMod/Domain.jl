@@ -107,7 +107,7 @@ function load_DHW(::Type{ReefModDomain}, data_path::String, rcp::String, timefra
     end
 
     # Only return valid members
-    return NamedDimsArray(data_cube[:, :, keep_ds], timesteps=timeframe[1]:timeframe[2], locs=loc_ids, member=rcp_files[keep_ds])
+    return NamedDimsArray(data_cube[:, :, keep_ds], timesteps=timeframe[1]:timeframe[2], locs=loc_ids, scenarios=rcp_files[keep_ds])
 end
 
 """
@@ -163,7 +163,7 @@ end
 - `loc_ids` : location ids
 
 # Returns
-NamedDimsArray[years, locs, members]
+NamedDimsArray[timesteps, locs, members]
 """
 function load_cyclones(::Type{ReefModDomain}, data_path::String, loc_ids::Vector{String})::NamedDimsArray
     # NOTE: This reads from the provided CSV files
@@ -183,7 +183,7 @@ function load_cyclones(::Type{ReefModDomain}, data_path::String, loc_ids::Vector
     end
 
     # Mean over all years
-    return NamedDimsArray(permutedims(cyc_data, (2, 1, 3)), years=1:num_years, locs=loc_ids, members=1:length(cyc_files))
+    return NamedDimsArray(permutedims(cyc_data, (2, 1, 3)), timesteps=1:num_years, locs=loc_ids, scenarios=1:length(cyc_files))
 end
 
 """
@@ -256,7 +256,6 @@ function load_domain(::Type{ReefModDomain}, fn_path::String, RCP::String)::ReefM
     # Reorder to match id_list order
     dhw_scens = dhw_scens[:, id_order, :]
     conn_data = conn_data[id_order, id_order]
-
     in_conn, out_conn, strong_pred = ADRIA.connectivity_strength(conn_data)
 
     site_dist, med_site_dist = ADRIA.site_distances(site_data)
