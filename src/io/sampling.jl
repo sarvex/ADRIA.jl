@@ -309,8 +309,8 @@ fix_factor!(dom, :guided)
 # Fix `guided` to specified value
 fix_factor!(dom, :guided, 3)
 
-# Fix specified factors to their paired values
-fix_factor!(dom, :guided=>3, :seed_TA=>1e6)
+# Fix specified factors to provided values
+fix_factor!(dom; guided=3, seed_TA=1e6)
 ```
 """
 function fix_factor!(d::Domain, factor::Symbol)::Nothing
@@ -335,7 +335,7 @@ function fix_factor!(d::Domain, factor::Symbol, val::Real)::Nothing
 
     update!(d, params)
 end
-function fix_factor!(d::Domain, factors::Pair{Symbol,Real}...)
+function fix_factor!(d::Domain; factors...)
     for (factor, val) in factors
         fix_factor!(d, factor, val)
     end
