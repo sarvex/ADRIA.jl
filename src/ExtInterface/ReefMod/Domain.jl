@@ -234,7 +234,7 @@ ReefModDomain
 """
 function load_domain(::Type{ReefModDomain}, fn_path::String, RCP::String)::ReefModDomain
     data_files = joinpath(fn_path, "data_files")
-    id_list = CSV.read(joinpath(data_files, "id", "id_list_Dec_2022_151222_check_corrected_extra_column_220323.csv"), DataFrame, header=false)
+    id_list = CSV.read(joinpath(data_files, "id", "id_list_Dec_2022_151222.csv"), DataFrame, header=false)
 
     site_data = GDF.read(joinpath(data_files, "region", "reefmod_gbr.gpkg"))
 
