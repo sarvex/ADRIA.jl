@@ -231,20 +231,20 @@ function guided_site_selection(criteria_store::NamedDimsArray,
     rankingsin::Matrix{T}
 )::Tuple where {T<:Int64,IA<:AbstractArray{<:Int64},IB<:AbstractArray{<:Int64},B<:Bool}
 
-    site_ids::Array{Int64} = criteria_store.reefs
+    site_ids::Array{Int64} = criteria_store.locations
     use_dist::Int64 = params("use_dist")
 
     # Force different sites to be selected
-    site_ids = setdiff(site_ids, hcat(prefseedsites, prefshadesites))
+    site_ids = setdiff(site_ids, vcat(prefseedsites, prefshadesites))
     mod_n_ranks = min(size(rankingsin, 1), length(site_ids))
-    if mod_n_ranks < length(criteria_store.reefs) && length(rankingsin) != 0
+    if mod_n_ranks < length(criteria_store.locations) && length(rankingsin) != 0
         rankingsin = rankingsin[in.(rankingsin[:, 1], [site_ids]), :]
         site_ids = rankingsin[:, 1]
     elseif length(rankingsin) != 0
         rankingsin = [site_ids zeros(Int64, length(site_ids)) zeros(Int64, length(site_ids))]
     end
 
-    criteria_store = criteria_store[in.(criteria_store.reefs, [site_ids]), :]
+    criteria_store = criteria_store[in.(criteria_store.locations, [site_ids]), :]
     n_sites::Int64 = length(site_ids)
 
     # if no sites are available, abort
