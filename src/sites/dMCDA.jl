@@ -278,7 +278,7 @@ function guided_site_selection(criteria_store::NamedDimsArray,
     if log_seed && isempty(SE)
         prefseedsites = repeat([0], n_site_int)
     elseif log_seed
-        prefseedsites, s_order_seed = rank_seed_sites!(SE, wse, rankings, n_site_int, mcda_func)
+        prefseedsites, s_order_seed = rank_seed_sites!(SE, wse, rankings, n_site_int, criteria_store.locations, mcda_func)
         if use_dist != 0
             prefseedsites, rankings = distance_sorting(prefseedsites, s_order_seed, distances, minimum_distance, rankings, 2)
         end
@@ -287,7 +287,8 @@ function guided_site_selection(criteria_store::NamedDimsArray,
     if log_shade && isempty(SH)
         prefshadesites = repeat([0], n_site_int)
     elseif log_shade
-        prefshadesites, s_order_shade = rank_shade_sites!(SH, wsh, rankings, n_site_int, mcda_func)
+        prefshadesites, s_order_shade = rank_shade_sites!(SH, wsh, rankings, n_site_int, criteria_store.locations, mcda_func)
+
         if use_dist != 0
             prefshadesites, rankings = distance_sorting(prefshadesites, s_order_shade, distances, minimum_distance, rankings, 3)
         end
