@@ -543,7 +543,7 @@ Here, `max_cover` represents the max. carrying capacity for each location (the `
 - `available_space` : vector/matrix : space available at each location (`k` value)
 - `depth` : vector of location ids found to be within desired depth range
 """
-function unguided_location_selection(prefseedlocations, prefshadelocations, seed_years, shade_years, n_location_int, available_space, depth)
+function unguided_location_selection(pref_locations, int_log, n_location_int, available_space, depth)
     # Unguided deployment, seed/shade corals anywhere so long as available_space > 0.1
     # Only locations that have available space are considered, otherwise a zero-division error may occur later on.
 
@@ -552,17 +552,15 @@ function unguided_location_selection(prefseedlocations, prefshadelocations, seed
     num_locations = length(candidate_locations)
     s_n_location_int = num_locations < n_location_int ? num_locations : n_location_int
 
-    if seed_years
-        prefseedlocations = zeros(Int64, n_location_int)
-        prefseedlocations[1:s_n_location_int] .= StatsBase.sample(candidate_locations, s_n_location_int; replace=false)
+    for int_key in keys(int_log)
+        if int_log[int_key]
+            pref_locations[int_key] .= zeros(Int64, n_location_int)
+            pref_locations[int_key][1:s_n_location_int] .= StatsBase.sample(candidate_locations, s_n_location_int; replace=false)
+            pref_locations[int_key] .= pref_locations[int_key][pref_locations[int_key].>0]
+        end
     end
 
-    if shade_years
-        prefshadelocations = zeros(Int64, n_location_int)
-        prefshadelocations[1:s_n_location_int] .= StatsBase.sample(candidate_locations, s_n_location_int; replace=false)
-    end
-
-    return prefseedlocations[prefseedlocations.>0], prefshadelocations[prefshadelocations.>0]
+    return pref_locations
 end
 
 
