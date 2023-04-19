@@ -508,30 +508,37 @@ function run_model(domain::Domain, param_set::NamedDimsArray, corals::DataFrame,
             location_ranks[tstep, rankings[:fog][:, 1], 2] .= rankings[:fog][:, 2:end]
         elseif seed_corals && in_seed_years
             # Unguided deployment, seed/shade corals anywhere, so long as available space > 0
-            prefseedlocations, prefshadelocations = unguided_location_selection(prefseedlocations, prefshadelocations,
-                seed_decision_years[tstep], shade_decision_years[tstep],
+            pref_locations = unguided_location_selection(pref_locations, int_log(year=tstep),
                 n_location_int, vec(leftover_space_m²), depth_priority)
 
-            location_ranks[tstep, prefseedlocations, 1] .= 1.0
-            location_ranks[tstep, prefshadelocations, 2] .= 1.0
+            location_ranks[tstep, pref_locations.seed, 1] .= 1.0
+            location_ranks[tstep, pref_locations.fog, 2] .= 1.0
+            location_ranks[tstep, pref_locations.shade, 3] .= 1.0
         end
 
-        has_shade_locations::Bool = !all(prefshadelocations .== 0)
-        has_seed_locations::Bool = !all(prefseedlocations .== 0)
+        has_fog_locations::Bool = !all(pref_locations.fog .== 0)
+        has_seed_locations::Bool = !all(pref_locations.seed .== 0)
+        has_shade_locations::Bool = !all(pref_locations.shade .== 0)
+
         if (srm > 0.0) && in_shade_years
-            Yshade[tstep, :] .= srm
+            if has_shade_locations
+                locations_in_clusters = Bool.(dropdims(sum(in.(pref_locations.shade, domain.mcda_criteria.iv__clusters), dims=1), dims=1))
+            else
+                locations_in_clusters = Bool.(ones(n_locations))
+            end
+            Yshade[tstep, locations_in_clusters] .= srm
 
             # Apply reduction in DHW due to SRM
-            dhw_t .= max.(0.0, dhw_t .- srm)
+            dhw_t[locations_in_clusters] .= max.(0.0, dhw_t[locations_in_clusters] .- srm)
         end
 
-        if (fogging > 0.0) && in_shade_years && (has_seed_locations || has_shade_locations)
+        if (fogging > 0.0) && in_shade_years && (has_seed_locations || has_fog_locations)
             if has_seed_locations
                 # Always fog seeded locations if they are selected
-                location_locs::Vector{Int64} = prefseedlocations
-            elseif has_shade_locations
+                location_locs::Vector{Int64} = pref_locations.seed
+            elseif has_fog_locations
                 # Use locations selected for fogging otherwise
-                location_locs = prefshadelocations
+                location_locs = pref_locations.fog
             end
 
             dhw_t[location_locs] .= dhw_t[location_locs] .* (1.0 .- fogging)
